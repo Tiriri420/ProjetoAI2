@@ -170,3 +170,19 @@ exports.deactivateProposal = async (req, res) => {
         res.status(500).json({ message: 'Erro ao desativar a proposta.' });
     }
 };
+
+exports.getValidatedProposals = async (req, res) => {
+    try {
+        const propostas = await Proposta.findAll({
+            where: { status: 'VALIDADO' },
+            order: [['created_at', 'DESC']],
+            include: [
+                { model: PerfilEmpresa, as: 'empresa', attributes: ['nome_empresa'] },
+                { model: Competencia, as: 'competencias', attributes: ['nome'], through: { attributes: [] } }
+            ]
+        });
+        res.status(200).json(propostas);
+    } catch (error) {
+        res.status(500).json({ message: 'Erro ao buscar propostas validadas.' });
+    }
+};

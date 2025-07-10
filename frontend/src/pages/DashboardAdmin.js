@@ -1,6 +1,44 @@
-import React from 'react';
-import { Container, Row, Col, Card, Button, ListGroup } from 'react-bootstrap';
-import AdicionarUtilizador from '../components/AdicionarUtilizador'; // Você já tem este!
+import React, { useState, useEffect } from 'react';
+import { Container, Row, Col, Card, Button, Tabs, Tab, Spinner } from 'react-bootstrap';
+import axios from 'axios';
+import AdicionarUtilizador from '../components/AdicionarUtilizador';
+import ManageEntity from '../components/ManageEntity';
+import UserList from '../components/UserList';
+
+const StatsPanel = () => {
+    const [stats, setStats] = useState({});
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                setLoading(false);
+                return;
+            };
+            try {
+                const res = await axios.get('http://localhost:5000/api/admin/stats', { headers: { Authorization: `Bearer ${token}` } });
+                setStats(res.data);
+            } catch (err) {
+                console.error("Erro ao buscar estatísticas", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchStats();
+    }, []);
+
+    if (loading) return <div className="text-center"><Spinner animation="border" size="sm" /></div>;
+    return (
+        <Row>
+            <Col><Card className="text-center p-3"><Card.Title>{stats.totalUsers || 0}</Card.Title><Card.Text>Utilizadores</Card.Text></Card></Col>
+            <Col><Card className="text-center p-3"><Card.Title>{stats.totalEmpresas || 0}</Card.Title><Card.Text>Empresas</Card.Text></Card></Col>
+            <Col><Card className="text-center p-3"><Card.Title>{stats.totalPropostas || 0}</Card.Title><Card.Text>Propostas Totais</Card.Text></Card></Col>
+            <Col><Card className="text-center p-3"><Card.Title>{stats.pendingPropostas || 0}</Card.Title><Card.Text>Propostas Pendentes</Card.Text></Card></Col>
+        </Row>
+    );
+};
+
 
 const DashboardAdmin = () => {
     const handleLogout = () => {
@@ -9,10 +47,15 @@ const DashboardAdmin = () => {
         window.location.href = '/login';
     };
 
-    // Dados de exemplo (no futuro, virão da API)
-    const pendingProposals = [
-        { id: 1, title: 'Developer Full-Stack', company: 'Tech Solutions' },
-        { id: 2, title: 'Estágio em Marketing Digital', company: 'Web Agency' },
+    const competenciaFields = [
+        { name: 'id_competencia', label: 'ID' },
+        { name: 'nome', label: 'Nome' },
+        { name: 'tipo', label: 'Tipo', type: 'select', options: ['TECNICA', 'SOFTSKILL'] }
+    ];
+    
+    const areaFields = [
+        { name: 'id_area', label: 'ID' },
+        { name: 'nome', label: 'Nome' }
     ];
 
     return (
@@ -22,47 +65,38 @@ const DashboardAdmin = () => {
                 <Col className="text-end"><Button variant="danger" onClick={handleLogout}>Logout</Button></Col>
             </Row>
 
-            <Row>
-                {/* Coluna de Ações Rápidas */}
-                <Col md={8}>
-                    <Card>
-                        <Card.Header as="h5">Propostas Pendentes de Validação</Card.Header>
-                        <Card.Body>
-                            {pendingProposals.length > 0 ? (
-                                <ListGroup variant="flush">
-                                    {pendingProposals.map(p => (
-                                        <ListGroup.Item key={p.id} className="d-flex justify-content-between align-items-center">
-                                            {p.title} - <strong>{p.company}</strong>
-                                            <Button variant="outline-primary" size="sm" onClick={() => alert(`Validar proposta ${p.id}`)}>Validar</Button>
-                                        </ListGroup.Item>
-                                    ))}
-                                </ListGroup>
-                            ) : (
-                                <p>Nenhuma proposta a aguardar validação.</p>
-                            )}
-                        </Card.Body>
-                    </Card>
-                </Col>
-                
-                {/* Coluna de Estatísticas */}
-                <Col md={4}>
-                    <Card>
-                        <Card.Header as="h5">Estatísticas</Card.Header>
-                        <ListGroup variant="flush">
-                            <ListGroup.Item>Total de Utilizadores: <strong>150</strong></ListGroup.Item>
-                            <ListGroup.Item>Total de Empresas: <strong>30</strong></ListGroup.Item>
-                            <ListGroup.Item>Propostas Ativas: <strong>45</strong></ListGroup.Item>
-                        </ListGroup>
-                    </Card>
-                </Col>
-            </Row>
+            <Card className="mb-4">
+                <Card.Header as="h5">Estatísticas Gerais</Card.Header>
+                <Card.Body><StatsPanel /></Card.Body>
+            </Card>
 
-            {/* Componente para adicionar utilizador */}
-            <Row className="mt-4">
-                <Col>
-                    <AdicionarUtilizador />
-                </Col>
-            </Row>
+            <Tabs defaultActiveKey="users" id="admin-dashboard-tabs" className="mb-3" fill>
+                <Tab eventKey="users" title="Gestão de Utilizadores">
+                    <Row>
+                        <Col lg={5}>
+                            <Card>
+                                <Card.Body>
+                                    <AdicionarUtilizador />
+                                </Card.Body>
+                            </Card>
+                        </Col>
+                        <Col lg={7}>
+                            <Card>
+                                <Card.Header as="h5">Utilizadores Registados</Card.Header>
+                                <Card.Body>
+                                    <UserList />
+                                </Card.Body>
+                            </Card>
+                        </Col>
+                    </Row>
+                </Tab>
+                <Tab eventKey="competencias" title="Gestão de Competências">
+                    <ManageEntity entityName="Competências" apiEndpoint="competencias" fields={competenciaFields} />
+                </Tab>
+                <Tab eventKey="areas" title="Gestão de Áreas/Departamentos">
+                    <ManageEntity entityName="Áreas" apiEndpoint="areas" fields={areaFields} />
+                </Tab>
+            </Tabs>
         </Container>
     );
 };

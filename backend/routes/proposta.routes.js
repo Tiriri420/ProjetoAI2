@@ -3,7 +3,7 @@
 const express = require('express');
 const router = express.Router();
 const propostaController = require('../controllers/proposta.controller');
-const { protect, isEmpresa, canValidate } = require('../middleware/auth.middleware');
+const { protect, isEmpresa, canValidate, isEstudante } = require('../middleware/auth.middleware');
 
 // =============================================
 // Rotas de Validação (Acesso para Admin/Gestor)
@@ -30,5 +30,8 @@ router.put('/:id', protect, isEmpresa, propostaController.updateProposal);
 
 // Desativar uma proposta (mudar status para 'FECHADO')
 router.patch('/:id/deactivate', protect, isEmpresa, propostaController.deactivateProposal);
+
+// --- Rota de Estudante ---
+router.get('/', protect, isEstudante, propostaController.getValidatedProposals);
 
 module.exports = router;

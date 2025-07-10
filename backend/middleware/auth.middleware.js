@@ -28,5 +28,12 @@ const canValidate = (req, res, next) => {
         res.status(403).json({ message: 'Acesso negado. Apenas para Administradores ou Gestores.' });
     }
 };
+const isEstudante = (req, res, next) => {
+    if (req.user && req.user.role === 'ESTUDANTE') {
+        next();
+    } else {
+        res.status(403).json({ message: 'Acesso negado. Apenas para estudantes.' });
+    }
+};
 
-module.exports = { protect, isAdmin, isEmpresa, canValidate };
+module.exports = { protect, isAdmin, isEmpresa, canValidate, isEstudante };
