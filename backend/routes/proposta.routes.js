@@ -3,7 +3,18 @@
 const express = require('express');
 const router = express.Router();
 const propostaController = require('../controllers/proposta.controller');
-const { protect, isEmpresa } = require('../middleware/auth.middleware');
+const { protect, isEmpresa, canValidate } = require('../middleware/auth.middleware');
+
+// =============================================
+// Rotas de Validação (Acesso para Admin/Gestor)
+// =============================================
+router.get('/pendentes', protect, canValidate, propostaController.getPendingProposals);
+router.patch('/:id/validate', protect, canValidate, propostaController.validateProposal);
+
+
+// =============================================
+// Rotas de Gestão (Acesso para Empresa)
+// =============================================
 
 // Criar uma nova proposta
 router.post('/', protect, isEmpresa, propostaController.createProposal);

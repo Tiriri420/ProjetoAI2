@@ -20,6 +20,13 @@ const protect = (req, res, next) => {
 
 const isAdmin = (req, res, next) => (req.user && req.user.role === 'ADMIN') ? next() : res.status(403).json({ message: 'Acesso negado. Apenas para administradores.' });
 const isEmpresa = (req, res, next) => (req.user && req.user.role === 'EMPRESA') ? next() : res.status(403).json({ message: 'Acesso negado. Apenas para empresas.' });
-// (No futuro, adicione isGestor e isEstudante aqui)
+const canValidate = (req, res, next) => {
+    const allowedRoles = ['ADMIN', 'GESTOR'];
+    if (req.user && allowedRoles.includes(req.user.role)) {
+        next();
+    } else {
+        res.status(403).json({ message: 'Acesso negado. Apenas para Administradores ou Gestores.' });
+    }
+};
 
-module.exports = { protect, isAdmin, isEmpresa };
+module.exports = { protect, isAdmin, isEmpresa, canValidate };

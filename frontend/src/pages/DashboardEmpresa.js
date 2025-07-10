@@ -49,6 +49,12 @@ const DashboardEmpresa = () => {
         return <Badge bg={bg}>{text}</Badge>;
     };
 
+    const formatDate = (dateString) => {
+        if (!dateString) return 'N/A';
+        const options = { year: 'numeric', month: 'long', day: 'numeric' };
+        return new Date(dateString).toLocaleDateString('pt-PT', options);
+    };
+
     const handleDeactivate = async (id) => {
         if (window.confirm("Tem a certeza que quer desativar esta proposta? Esta ação não pode ser revertida pela empresa.")) {
             try {
@@ -85,7 +91,7 @@ const DashboardEmpresa = () => {
                 <Col className="text-end"><Button variant="danger" onClick={handleLogout}>Logout</Button></Col>
             </Row>
 
-            <Modal show={showModal} onHide={() => setShowModal(false)} size="lg">
+            <Modal show={showModal} onHide={() => { setShowModal(false); setEditingProposalId(null); }} size="lg">
                 <Modal.Body>
                     <PropostaForm proposalId={editingProposalId} onFormSubmit={handleFormSubmit} />
                 </Modal.Body>
@@ -107,7 +113,10 @@ const DashboardEmpresa = () => {
                                 <ListGroup.Item key={p.id_proposta} className="d-flex justify-content-between align-items-center">
                                     <div>
                                         <h5 className="mb-1">{p.titulo} {getStatusBadge(p.status)}</h5>
-                                        <p className="mb-1 text-muted">{p.local_de_trabalho}</p>
+                                        <p className="mb-1 text-muted">
+                                            <span className="me-4"><strong>Local:</strong> {p.local_de_trabalho || 'N/A'}</span>
+                                            <span><strong>Prazo:</strong> {formatDate(p.prazo_candidatura)}</span>
+                                        </p>
                                         <div>
                                             {p.competencias.map(c => (
                                                 <Badge pill bg="info" key={c.id_competencia} className="me-1 fw-normal">
@@ -117,7 +126,7 @@ const DashboardEmpresa = () => {
                                         </div>
                                     </div>
                                     <div>
-                                        <Button variant="outline-secondary" size="sm" className="me-2" onClick={() => handleShowEditModal(p.id_proposta)}>
+                                        <Button variant="outline-secondary" size="sm" className="me-2" onClick={() => handleShowEditModal(p.id_proposta)} disabled={p.status === 'FECHADO'}>
                                             Editar
                                         </Button>
                                         <Button variant="outline-danger" size="sm" onClick={() => handleDeactivate(p.id_proposta)} disabled={p.status === 'FECHADO'}>
