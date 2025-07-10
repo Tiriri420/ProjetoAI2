@@ -1,31 +1,32 @@
 import React from 'react';
 import DashboardAdmin from './DashboardAdmin';
-// Importa outros dashboards aqui no futuro
-// import DashboardEmpresa from './DashboardEmpresa'; 
-// import DashboardEstudante from './DashboardEstudante';
+import DashboardEmpresa from './DashboardEmpresa';   // <-- Importar
+import DashboardGestor from './DashboardGestor';     // <-- Importar
+import DashboardEstudante from './DashboardEstudante'; // <-- Importar
+import { Navigate } from 'react-router-dom'; // Usar Navigate para redirecionar
 
 const Dashboard = () => {
     const userRole = localStorage.getItem('userRole');
     const token = localStorage.getItem('token');
 
-    // Se não estiver logado, redireciona para o login
+    // Se não estiver logado, redireciona para o login de forma segura
     if (!token) {
-        window.location.href = '/login';
-        return null; // Retorna null para não renderizar nada enquanto redireciona
+        return <Navigate to="/login" />;
     }
 
     // Decide qual dashboard mostrar com base no role
     switch (userRole) {
         case 'ADMIN':
             return <DashboardAdmin />;
-        // case 'EMPRESA':
-        //   return <DashboardEmpresa />;
-        // case 'ESTUDANTE':
-        //   return <DashboardEstudante />;
+        case 'EMPRESA':
+            return <DashboardEmpresa />;
+        case 'GESTOR':
+            return <DashboardGestor />;
+        case 'ESTUDANTE':
+            return <DashboardEstudante />;
         default:
-            // Se o role for desconhecido ou não tiver dashboard, volta para o login
-            window.location.href = '/login';
-            return null;
+            // Se o role for desconhecido, volta para o login
+            return <Navigate to="/login" />;
     }
 };
 

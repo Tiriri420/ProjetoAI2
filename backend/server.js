@@ -1,35 +1,43 @@
+// /server.js (na raiz do backend)
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
-const userRoutes = require('./routes/user.routes');
-const sequelize = require('./config/database');
+const db = require('./models'); // <-- MUDANÇA: Sem /src
+
+// Importar rotas
 const authRoutes = require('./routes/auth.routes');
+const userRoutes = require('./routes/user.routes');
+const propostaRoutes = require('./routes/proposta.routes');
+const competenciaRoutes = require('./routes/competencia.routes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middlewares
-app.use(cors()); // Permite pedidos de outros domínios
-app.use(express.json()); // Permite ao Express ler JSON do body dos pedidos
+app.use(cors());
+app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use('/api/users', userRoutes);
 
-// Rotas da API
+// Usar rotas
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/propostas', propostaRoutes);
+app.use('/api/competencias', competenciaRoutes);
+
+// Rota de teste
 app.get('/api', (req, res) => {
-    res.json({ message: 'Bem-vindo à API da Plataforma ESTGV!' });
+    res.json({ message: 'Bem-vindo à API da Plataforma ESTGV! Backend está operacional.' });
 });
 
-app.use('/api/auth', authRoutes); // Usa as rotas de autenticação
-
 // Sincronizar com a BD e Iniciar o Servidor
-sequelize.authenticate()
+db.sequelize.sync({ force: false })
     .then(() => {
-        console.log('Ligação à base de dados estabelecida com sucesso.');
+        console.log('Base de dados sincronizada com sucesso.');
         app.listen(PORT, () => {
             console.log(`Servidor a correr na porta ${PORT}`);
         });
     })
     .catch(err => {
-        console.error('Não foi possível ligar à base de dados:', err);
+        console.error('Não foi possível sincronizar a base de dados:', err);
     });
