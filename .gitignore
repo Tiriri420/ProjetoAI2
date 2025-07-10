@@ -1,0 +1,87 @@
+# ===================================================================
+# Ficheiro .gitignore para projetos Node.js & React
+# ===================================================================
+
+# Ficheiros de Dependências e Build
+# ---------------------------------
+# Nunca envie a pasta node_modules. Ela é gigante e as dependências
+# devem ser instaladas com 'npm install' usando o package-lock.json.
+node_modules/
+
+# Ficheiros de build do frontend (React)
+# Gerados pelo 'npm run build'
+build/
+dist/
+.next/
+
+# Ficheiros de Log
+# ----------------
+# Ficheiros de log podem conter informação sensível e crescer muito.
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Ficheiros de Ambiente e Configuração Local
+# -------------------------------------------
+# Extremamente importante! Contém segredos como passwords de BD, chaves de API, etc.
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
+
+# Ficheiros de Sistema Operacional
+# --------------------------------
+# Lixo gerado pelo macOS, Windows e Linux.
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+ehthumbs_vista.db
+._*
+.Spotlight-V100
+.Trashes
+Icon?
+
+# Ficheiros de IDE e Editores
+# ---------------------------
+# Configurações específicas do ambiente de desenvolvimento de cada pessoa.
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Ficheiros de Teste e Cobertura de Código
+# -----------------------------------------
+coverage/
+.nyc_output/
+
+# Outros
+# ------
+# Ficheiros de cache do npm/yarn
+.npm
+.yarn-integrity
+
+# Ficheiros de pacotes/tarballs
+*.tgz
+
+# Ficheiros de cache do ESLint
+.eslintcache
+
+# Ficheiros de compilação do TypeScript (se usar)
+*.tsbuildinfo
+
+# Ficheiros temporários e de crash
+.fuse_hidden*
+.nfs*
+*~
+.#*
