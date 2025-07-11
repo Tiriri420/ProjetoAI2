@@ -1,5 +1,3 @@
-// POSIÇÃO DO CÓDIGO: frontend/src/components/UserList.js
-
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Table, Button, Spinner, Alert, Badge } from 'react-bootstrap';

@@ -1,5 +1,3 @@
-// POSIÇÃO DO CÓDIGO: controllers/admin.controller.js
-
 const { Competencia, AreaDepartamento, Utilizador, Proposta, sequelize } = require('../models');
 
 // --- Gestão de Competências ---

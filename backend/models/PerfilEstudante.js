@@ -1,5 +1,3 @@
-// POSIÇÃO DO CÓDIGO: models/PerfilEstudante.js
-
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 

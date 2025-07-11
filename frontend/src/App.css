@@ -1,0 +1,66 @@
+:root {
+  --bs-body-font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --bs-primary: #0d6efd;
+  --bs-primary-rgb: 13, 110, 253;
+  --text-dark: #212529;
+  --text-light: #f8f9fa;
+}
+
+body {
+  background: linear-gradient(to right top, #d2d6f2, #e3e2ff, #f2edff, #fdf8ff, #ffffff);
+  background-attachment: fixed;
+  color: var(--text-dark);
+}
+
+h1, .h1 {
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.card {
+  background-color: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.75rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+  background-color: rgba(255, 255, 255, 0.5);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  font-weight: 600;
+}
+
+.table {
+  vertical-align: middle;
+}
+
+.nav-tabs .nav-link {
+    color: #6c757d;
+    background-color: transparent;
+    border-color: transparent;
+}
+
+.nav-tabs .nav-link.active {
+    color: var(--bs-primary);
+    background-color: rgba(255, 255, 255, 0.75);
+    border-color: #dee2e6 #dee2e6 rgba(255, 255, 255, 0.75);
+    border-top-left-radius: 0.5rem;
+    border-top-right-radius: 0.5rem;
+}
+
+.tab-content {
+    background-color: rgba(255, 255, 255, 0.75);
+    padding: 1rem;
+    border: 1px solid #dee2e6;
+    border-top: none;
+    border-bottom-left-radius: 0.5rem;
+    border-bottom-right-radius: 0.5rem;
+}
+
+.modal-content {
+    background-color: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 0.75rem;
+}

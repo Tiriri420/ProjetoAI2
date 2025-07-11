@@ -1,5 +1,3 @@
-// POSIÇÃO DO CÓDIGO: controllers/estudante.controller.js
-
 const { PerfilEstudante, Competencia, AreaDepartamento, Proposta, sequelize } = require('../models');
 
 exports.getMyProfile = async (req, res) => {
@@ -15,7 +13,7 @@ exports.getMyProfile = async (req, res) => {
                     attributes: ['id_proposta'],
                     // Trazemos os dados da tabela de junção explicitamente
                     through: {
-                        as: 'candidaturaInfo', // Damos um alias à info da junção
+                        as: 'candidaturaInfo',
                         attributes: ['status']
                     }
                 }
@@ -55,8 +53,6 @@ exports.applyToProposal = async (req, res) => {
         const { propostaId } = req.params;
         const estudanteId = req.user.id;
 
-        // ESTA É A FORMA MAIS ROBUSTA E EXPLÍCITA DE FAZER A INSERÇÃO
-        // Usamos diretamente a tabela de junção 'candidaturas'
         await sequelize.models.candidaturas.create({
             estudante_utilizador_id: estudanteId,
             proposta_id: propostaId

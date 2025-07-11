@@ -1,5 +1,3 @@
-// POSIÇÃO DO CÓDIGO: controllers/auth.controller.js
-
 const { Utilizador, PerfilEmpresa, sequelize } = require('../models');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -28,7 +26,6 @@ exports.register = async (req, res) => {
                 nome_empresa: nome_empresa
             }, { transaction: t });
         }
-        // No futuro, adicione aqui a lógica para 'ESTUDANTE' e 'GESTOR'
 
         await t.commit();
         res.status(201).json({ message: 'Utilizador e perfil registados com sucesso!', userId: novoUtilizador.id_utilizador });

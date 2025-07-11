@@ -1,5 +1,3 @@
-// POSIÇÃO DO CÓDIGO: frontend/src/components/ManageEntity.js
-
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Table, Button, Form, Modal, Row, Col } from 'react-bootstrap';
@@ -10,28 +8,37 @@ const ManageEntity = ({ entityName, apiEndpoint, fields }) => {
     const [currentItem, setCurrentItem] = useState({});
     const [isEditing, setIsEditing] = useState(false);
 
-    const fetchData = async () => {
-        const token = localStorage.getItem('token');
-        const res = await axios.get(`http://localhost:5000/api/${apiEndpoint}`, { headers: { Authorization: `Bearer ${token}` } });
-        setItems(res.data);
-    };
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                const res = await axios.get(`http://localhost:5000/api/${apiEndpoint}`, { headers: { Authorization: `Bearer ${token}` } });
+                setItems(res.data);
+            } catch (error) {
+                console.error(`Erro ao buscar ${entityName}:`, error);
+            }
+        };
 
-    useEffect(() => { fetchData(); }, [apiEndpoint]);
+        fetchData();
+    }, [apiEndpoint, entityName]);
 
     const handleSave = async () => {
         const token = localStorage.getItem('token');
         const config = { headers: { Authorization: `Bearer ${token}` } };
         const data = { ...currentItem };
-        delete data[fields[0].name]; // Remove ID do corpo do pedido
+        delete data[fields[0].name];
+
+        const idField = fields[0].name;
 
         try {
             if (isEditing) {
-                await axios.put(`http://localhost:5000/api/admin/${apiEndpoint}/${currentItem[fields[0].name]}`, data, config);
+                await axios.put(`http://localhost:5000/api/admin/${apiEndpoint}/${currentItem[idField]}`, data, config);
             } else {
                 await axios.post(`http://localhost:5000/api/admin/${apiEndpoint}`, data, config);
             }
-            fetchData();
             setShowModal(false);
+            const res = await axios.get(`http://localhost:5000/api/${apiEndpoint}`, config);
+            setItems(res.data);
         } catch (error) {
             alert('Erro ao guardar.');
         }
@@ -39,9 +46,15 @@ const ManageEntity = ({ entityName, apiEndpoint, fields }) => {
 
     const handleDelete = async (id) => {
         if (window.confirm('Tem a certeza?')) {
-            const token = localStorage.getItem('token');
-            await axios.delete(`http://localhost:5000/api/admin/${apiEndpoint}/${id}`, { headers: { Authorization: `Bearer ${token}` } });
-            fetchData();
+            try {
+                const token = localStorage.getItem('token');
+                await axios.delete(`http://localhost:5000/api/admin/${apiEndpoint}/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+                const config = { headers: { Authorization: `Bearer ${token}` } };
+                const res = await axios.get(`http://localhost:5000/api/${apiEndpoint}`, config);
+                setItems(res.data);
+            } catch (error) {
+                alert('Erro ao apagar.');
+            }
         }
     };
 
@@ -72,7 +85,7 @@ const ManageEntity = ({ entityName, apiEndpoint, fields }) => {
                         <tr key={item[fields[0].name]}>
                             {fields.map(f => <td key={f.name}>{item[f.name]}</td>)}
                             <td>
-                                <Button variant="outline-primary" size="sm" onClick={() => openModal(item)}>Editar</Button>{' '}
+                                <Button variant="outline-primary" size="sm" className="me-2" onClick={() => openModal(item)}>Editar</Button>
                                 <Button variant="outline-danger" size="sm" onClick={() => handleDelete(item[fields[0].name])}>Apagar</Button>
                             </td>
                         </tr>
@@ -81,15 +94,16 @@ const ManageEntity = ({ entityName, apiEndpoint, fields }) => {
             </Table>
 
             <Modal show={showModal} onHide={() => setShowModal(false)}>
-                <Modal.Header closeButton><Modal.Title>{isEditing ? 'Editar' : 'Adicionar'}</Modal.Title></Modal.Header>
+                <Modal.Header closeButton><Modal.Title>{isEditing ? `Editar ${entityName}` : `Adicionar ${entityName}`}</Modal.Title></Modal.Header>
                 <Modal.Body>
                     <Form>
-                        {fields.slice(1).map(field => ( // slice(1) para não mostrar o campo ID
+                        {fields.slice(1).map(field => (
                             <Form.Group as={Row} className="mb-3" key={field.name}>
                                 <Form.Label column sm="3">{field.label}</Form.Label>
                                 <Col sm="9">
                                 {field.type === 'select' ? (
                                     <Form.Select value={currentItem[field.name] || ''} onChange={e => setCurrentItem({...currentItem, [field.name]: e.target.value})}>
+                                        <option value="">Selecione...</option>
                                         {field.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                     </Form.Select>
                                 ) : (

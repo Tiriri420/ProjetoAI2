@@ -1,5 +1,3 @@
-// POSIÇÃO DO CÓDIGO: controllers/user.controller.js
-
 const { Utilizador, PerfilEmpresa, PerfilGestor, PerfilEstudante, sequelize } = require('../models');
 const bcrypt = require('bcryptjs');
 

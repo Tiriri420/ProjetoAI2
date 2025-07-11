@@ -3,7 +3,7 @@ const { Candidatura } = require('../models');
 exports.decideOnCandidate = async (req, res) => {
     try {
         const { propostaId, estudanteId } = req.params;
-        const { status } = req.body; // 'ACEITE' ou 'REJEITADO'
+        const { status } = req.body;
 
         if (!['ACEITE', 'REJEITADO'].includes(status)) {
             return res.status(400).json({ message: 'Status inválido.' });

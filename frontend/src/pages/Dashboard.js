@@ -1,9 +1,9 @@
 import React from 'react';
 import DashboardAdmin from './DashboardAdmin';
-import DashboardEmpresa from './DashboardEmpresa';   // <-- Importar
-import DashboardGestor from './DashboardGestor';     // <-- Importar
-import DashboardEstudante from './DashboardEstudante'; // <-- Importar
-import { Navigate } from 'react-router-dom'; // Usar Navigate para redirecionar
+import DashboardEmpresa from './DashboardEmpresa';   
+import DashboardGestor from './DashboardGestor';     
+import DashboardEstudante from './DashboardEstudante'; 
+import { Navigate } from 'react-router-dom'; 
 
 const Dashboard = () => {
     const userRole = localStorage.getItem('userRole');

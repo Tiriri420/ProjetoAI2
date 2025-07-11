@@ -1,5 +1,3 @@
-// POSIÇÃO DO CÓDIGO: frontend/src/components/AdicionarUtilizador.js
-
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Form, Button, Alert, Card, Row, Col } from 'react-bootstrap';

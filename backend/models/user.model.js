@@ -30,7 +30,4 @@ const Utilizador = sequelize.define('Utilizador', {
     timestamps: false, // Se não tiveres colunas createdAt, updatedAt
 });
 
-// Futuramente, aqui vais definir as relações:
-// Utilizador.hasOne(PerfilEstudante, { foreignKey: 'utilizador_id' });
-
 module.exports = Utilizador;
