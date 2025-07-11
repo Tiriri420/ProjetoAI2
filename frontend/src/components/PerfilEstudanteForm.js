@@ -1,14 +1,12 @@
-// POSIÇÃO DO CÓDIGO: frontend/src/components/PerfilEstudanteForm.js
-
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Form, Button, Alert, Card, Row, Col, Spinner, Badge } from 'react-bootstrap';
+import { Form, Button, Alert, Card, Row, Col, Spinner } from 'react-bootstrap';
 
 const PerfilEstudanteForm = ({ onFormSubmit }) => {
     const [profileData, setProfileData] = useState({
         curso: '',
         ano_conclusao: '',
-        competencias: [],
+        habilidades: [],
         areasInteresse: [],
     });
     const [allCompetencias, setAllCompetencias] = useState([]);
@@ -29,11 +27,11 @@ const PerfilEstudanteForm = ({ onFormSubmit }) => {
                     axios.get('http://localhost:5000/api/areas', config)
                 ]);
 
-                const { curso, ano_conclusao, competencias, areasInteresse } = profileRes.data;
+                const { curso, ano_conclusao, habilidades, areasInteresse } = profileRes.data;
                 setProfileData({
                     curso: curso || '',
                     ano_conclusao: ano_conclusao || '',
-                    competencias: competencias.map(c => c.id_competencia),
+                    habilidades: habilidades.map(c => c.id_competencia),
                     areasInteresse: areasInteresse.map(a => a.id_area),
                 });
                 
@@ -73,7 +71,9 @@ const PerfilEstudanteForm = ({ onFormSubmit }) => {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setMessage('Perfil atualizado com sucesso!');
-            setTimeout(() => { if(onFormSubmit) onFormSubmit(); }, 1500);
+            if (onFormSubmit) {
+                setTimeout(() => { onFormSubmit(); }, 1500);
+            }
         } catch (err) {
             setError(err.response?.data?.message || 'Ocorreu um erro.');
         } finally {
@@ -110,8 +110,8 @@ const PerfilEstudanteForm = ({ onFormSubmit }) => {
                         <div style={{ maxHeight: '150px', overflowY: 'auto', border: '1px solid #ddd', padding: '10px', borderRadius: '5px' }}>
                             {allCompetencias.map(c => (
                                 <Form.Check key={c.id_competencia} type="checkbox" label={c.nome} value={c.id_competencia}
-                                    checked={profileData.competencias.includes(c.id_competencia)}
-                                    onChange={(e) => handleCheckboxChange(e, 'competencias')}
+                                    checked={profileData.habilidades.includes(c.id_competencia)}
+                                    onChange={(e) => handleCheckboxChange(e, 'habilidades')}
                                 />
                             ))}
                         </div>

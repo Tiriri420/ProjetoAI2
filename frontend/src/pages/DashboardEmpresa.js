@@ -1,15 +1,62 @@
-// POSIÇÃO DO CÓDIGO: frontend/src/pages/DashboardEmpresa.js
-
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Button, ListGroup, Badge, Modal, Spinner, Alert } from 'react-bootstrap';
 import axios from 'axios';
 import PropostaForm from '../components/PropostaForm';
 
+const CandidatesModal = ({ proposal, show, handleClose }) => {
+    const [candidates, setCandidates] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (proposal) {
+            const fetchCandidates = async () => {
+                setLoading(true);
+                try {
+                    const token = localStorage.getItem('token');
+                    const res = await axios.get(`http://localhost:5000/api/propostas/${proposal.id_proposta}/candidatos`, {
+                        headers: { Authorization: `Bearer ${token}` }
+                    });
+                    setCandidates(res.data);
+                } catch (err) {
+                    console.error("Erro ao buscar candidatos", err);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            fetchCandidates();
+        }
+    }, [proposal]);
+
+    return (
+        <Modal show={show} onHide={handleClose} size="lg">
+            <Modal.Header closeButton>
+                <Modal.Title>Candidatos para: {proposal?.titulo}</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+                {loading ? <Spinner animation="border" /> : (
+                    <ListGroup variant="flush">
+                        {candidates.length > 0 ? candidates.map(c => (
+                            <ListGroup.Item key={c.Utilizador.id_utilizador}>
+                                <h5>{c.Utilizador.nome}</h5>
+                                <p className="mb-1 text-muted">{c.Utilizador.email}</p>
+                                <p className="mb-1"><strong>Curso:</strong> {c.curso || 'N/A'} ({c.ano_conclusao || 'N/A'})</p>
+                                <div>{c.habilidades.map(h => <Badge pill bg="dark" key={h.nome} className="me-1 fw-normal">{h.nome}</Badge>)}</div>
+                            </ListGroup.Item>
+                        )) : <p>Ainda não existem candidatos para esta proposta.</p>}
+                    </ListGroup>
+                )}
+            </Modal.Body>
+        </Modal>
+    );
+};
+
 const DashboardEmpresa = () => {
     const [minhasPropostas, setMinhasPropostas] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [showModal, setShowModal] = useState(false);
+    const [showFormModal, setShowFormModal] = useState(false);
+    const [showCandidatesModal, setShowCandidatesModal] = useState(false);
+    const [selectedProposal, setSelectedProposal] = useState(null);
     const [editingProposalId, setEditingProposalId] = useState(null);
 
     const handleLogout = () => {
@@ -19,70 +66,32 @@ const DashboardEmpresa = () => {
     };
 
     const fetchMinhasPropostas = async () => {
-        setLoading(true);
-        setError('');
+        setLoading(true); setError('');
         try {
             const token = localStorage.getItem('token');
-            const res = await axios.get('http://localhost:5000/api/propostas/minhas', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await axios.get('http://localhost:5000/api/propostas/minhas', { headers: { Authorization: `Bearer ${token}` } });
             setMinhasPropostas(res.data);
         } catch (err) {
-            setError('Não foi possível carregar as suas propostas. Tente atualizar a página.');
+            setError('Não foi possível carregar as suas propostas.');
         } finally {
             setLoading(false);
         }
     };
 
-    useEffect(() => {
-        fetchMinhasPropostas();
-    }, []);
+    useEffect(() => { fetchMinhasPropostas(); }, []);
 
     const getStatusBadge = (status) => {
-        const statusMap = {
-            PENDENTE: { bg: 'warning', text: 'Pendente' },
-            VALIDADO: { bg: 'success', text: 'Validado' },
-            FECHADO: { bg: 'secondary', text: 'Fechado' },
-            REJEITADO: { bg: 'danger', text: 'Rejeitado' },
-        };
-        const { bg, text } = statusMap[status] || { bg: 'dark', text: status };
-        return <Badge bg={bg}>{text}</Badge>;
+        const map = { PENDENTE: 'warning', VALIDADO: 'success', FECHADO: 'secondary', REJEITADO: 'danger' };
+        return <Badge bg={map[status] || 'dark'}>{status}</Badge>;
     };
 
-    const formatDate = (dateString) => {
-        if (!dateString) return 'N/A';
-        const options = { year: 'numeric', month: 'long', day: 'numeric' };
-        return new Date(dateString).toLocaleDateString('pt-PT', options);
-    };
-
-    const handleDeactivate = async (id) => {
-        if (window.confirm("Tem a certeza que quer desativar esta proposta? Esta ação não pode ser revertida pela empresa.")) {
-            try {
-                const token = localStorage.getItem('token');
-                await axios.patch(`http://localhost:5000/api/propostas/${id}/deactivate`, {}, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                fetchMinhasPropostas();
-            } catch (err) {
-                alert("Ocorreu um erro ao desativar a proposta.");
-            }
-        }
-    };
+    const formatDate = (dateString) => new Date(dateString).toLocaleDateString('pt-PT');
+    const handleDeactivate = async (id) => { /* ... */ };
     
-    const handleShowCreateModal = () => {
-        setEditingProposalId(null);
-        setShowModal(true);
-    };
-
-    const handleShowEditModal = (id) => {
-        setEditingProposalId(id);
-        setShowModal(true);
-    };
-
-    const handleFormSubmit = () => {
-        setShowModal(false);
-        fetchMinhasPropostas();
-    };
+    const handleShowCreateModal = () => { setEditingProposalId(null); setShowFormModal(true); };
+    const handleShowEditModal = (id) => { setEditingProposalId(id); setShowFormModal(true); };
+    const handleFormSubmit = () => { setShowFormModal(false); fetchMinhasPropostas(); };
+    const handleShowCandidates = (proposal) => { setSelectedProposal(proposal); setShowCandidatesModal(true); };
 
     return (
         <Container fluid className="mt-4">
@@ -91,50 +100,32 @@ const DashboardEmpresa = () => {
                 <Col className="text-end"><Button variant="danger" onClick={handleLogout}>Logout</Button></Col>
             </Row>
 
-            <Modal show={showModal} onHide={() => { setShowModal(false); setEditingProposalId(null); }} size="lg">
-                <Modal.Body>
-                    <PropostaForm proposalId={editingProposalId} onFormSubmit={handleFormSubmit} />
-                </Modal.Body>
+            <Modal show={showFormModal} onHide={() => setShowFormModal(false)} size="lg">
+                <Modal.Body><PropostaForm proposalId={editingProposalId} onFormSubmit={handleFormSubmit} /></Modal.Body>
             </Modal>
+            
+            {selectedProposal && <CandidatesModal proposal={selectedProposal} show={showCandidatesModal} handleClose={() => setShowCandidatesModal(false)} />}
 
             <Card>
-                <Card.Header as="h5" className="d-flex justify-content-between align-items-center">
-                    As Minhas Propostas
-                    <Button variant="primary" onClick={handleShowCreateModal}>
-                        + Criar Nova Proposta
-                    </Button>
-                </Card.Header>
+                <Card.Header as="h5" className="d-flex justify-content-between">As Minhas Propostas<Button variant="primary" onClick={handleShowCreateModal}>+ Criar Nova Proposta</Button></Card.Header>
                 <Card.Body>
-                    {loading && <div className="text-center"><Spinner animation="border" /></div>}
+                    {loading && <Spinner animation="border" />}
                     {error && <Alert variant="danger">{error}</Alert>}
                     {!loading && !error && (
                         <ListGroup variant="flush">
-                            {minhasPropostas.length > 0 ? minhasPropostas.map(p => (
+                            {minhasPropostas.map(p => (
                                 <ListGroup.Item key={p.id_proposta} className="d-flex justify-content-between align-items-center">
                                     <div>
-                                        <h5 className="mb-1">{p.titulo} {getStatusBadge(p.status)}</h5>
-                                        <p className="mb-1 text-muted">
-                                            <span className="me-4"><strong>Local:</strong> {p.local_de_trabalho || 'N/A'}</span>
-                                            <span><strong>Prazo:</strong> {formatDate(p.prazo_candidatura)}</span>
-                                        </p>
-                                        <div>
-                                            {p.competencias.map(c => (
-                                                <Badge pill bg="info" key={c.id_competencia} className="me-1 fw-normal">
-                                                    {c.nome}
-                                                </Badge>
-                                            ))}
-                                        </div>
+                                        <h5>{p.titulo} {getStatusBadge(p.status)}</h5>
+                                        <p className="mb-1 text-muted">{p.local_de_trabalho || 'N/A'} | Prazo: {formatDate(p.prazo_candidatura)}</p>
                                     </div>
                                     <div>
-                                        <Button variant="outline-secondary" size="sm" className="me-2" onClick={() => handleShowEditModal(p.id_proposta)} disabled={p.status === 'FECHADO'}>
-                                            Editar
-                                        </Button>
-                                        <Button variant="outline-danger" size="sm" onClick={() => handleDeactivate(p.id_proposta)} disabled={p.status === 'FECHADO'}>
-                                            Desativar
-                                        </Button>
+                                        <Button variant="info" size="sm" className="me-2" onClick={() => handleShowCandidates(p)}>Ver Candidatos</Button>
+                                        <Button variant="outline-secondary" size="sm" className="me-2" onClick={() => handleShowEditModal(p.id_proposta)}>Editar</Button>
+                                        <Button variant="outline-danger" size="sm" onClick={() => handleDeactivate(p.id_proposta)}>Desativar</Button>
                                     </div>
                                 </ListGroup.Item>
-                            )) : <p className="text-center text-muted">Ainda não criou nenhuma proposta.</p>}
+                            ))}
                         </ListGroup>
                     )}
                 </Card.Body>

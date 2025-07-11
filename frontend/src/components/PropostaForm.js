@@ -1,5 +1,3 @@
-// POSIÇÃO DO CÓDIGO: frontend/src/components/PropostaForm.js
-
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Form, Button, Alert, Card, Row, Col, Spinner } from 'react-bootstrap';
@@ -12,60 +10,57 @@ const PropostaForm = ({ proposalId, onFormSubmit }) => {
         local_de_trabalho: '',
         prazo_candidatura: '',
         competencias: [],
+        areas: [],
     });
     const [allCompetencias, setAllCompetencias] = useState([]);
+    const [allAreas, setAllAreas] = useState([]);
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
 
     useEffect(() => {
-        const fetchAllCompetencias = async () => {
-            try {
-                const token = localStorage.getItem('token');
-                const config = { headers: { Authorization: `Bearer ${token}` } };
-                const res = await axios.get('http://localhost:5000/api/competencias', config);
-                setAllCompetencias(res.data);
-            } catch (err) {
-                setError("Não foi possível carregar a lista de competências.");
-            }
-        };
-
-        const fetchProposalData = async () => {
+        const fetchData = async () => {
             setLoading(true);
+            const token = localStorage.getItem('token');
+            const config = { headers: { Authorization: `Bearer ${token}` } };
             try {
-                const token = localStorage.getItem('token');
-                const config = { headers: { Authorization: `Bearer ${token}` } };
-                const res = await axios.get(`http://localhost:5000/api/propostas/${proposalId}`, config);
-                
-                const { titulo, descricao, tipo_proposta, local_de_trabalho, prazo_candidatura, competencias } = res.data;
-                const competenciaIds = competencias.map(c => c.id_competencia);
-                const formattedPrazo = prazo_candidatura ? new Date(prazo_candidatura).toISOString().split('T')[0] : '';
-                
-                setFormData({ titulo, descricao, tipo_proposta, local_de_trabalho, prazo_candidatura: formattedPrazo, competencias: competenciaIds });
+                const [competenciasRes, areasRes] = await Promise.all([
+                    axios.get('http://localhost:5000/api/competencias', config),
+                    axios.get('http://localhost:5000/api/areas', config)
+                ]);
+                setAllCompetencias(competenciasRes.data);
+                setAllAreas(areasRes.data);
+
+                if (proposalId) {
+                    const res = await axios.get(`http://localhost:5000/api/propostas/${proposalId}`, config);
+                    const { titulo, descricao, tipo_proposta, local_de_trabalho, prazo_candidatura, competencias, areas } = res.data;
+                    const competenciaIds = competencias.map(c => c.id_competencia);
+                    const areaIds = areas.map(a => a.id_area);
+                    const formattedPrazo = prazo_candidatura ? new Date(prazo_candidatura).toISOString().split('T')[0] : '';
+                    
+                    setFormData({ titulo, descricao, tipo_proposta, local_de_trabalho, prazo_candidatura: formattedPrazo, competencias: competenciaIds, areas: areaIds });
+                }
             } catch (err) {
-                setError("Não foi possível carregar os dados da proposta para edição.");
+                setError("Não foi possível carregar os dados necessários.");
             } finally {
                 setLoading(false);
             }
         };
-
-        fetchAllCompetencias();
-        if (proposalId) {
-            fetchProposalData();
-        }
+        fetchData();
     }, [proposalId]);
 
     const onChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    const handleCompetenciaChange = (e) => {
+    const handleCheckboxChange = (e, field) => {
         const { value, checked } = e.target;
-        const competenciaId = parseInt(value);
-        let updatedCompetencias = checked
-            ? [...formData.competencias, competenciaId]
-            : formData.competencias.filter(id => id !== competenciaId);
-        setFormData({ ...formData, competencias: updatedCompetencias });
+        const id = parseInt(value);
+        const currentValues = formData[field];
+        const newValues = checked
+            ? [...currentValues, id]
+            : currentValues.filter(v => v !== id);
+        setFormData({ ...formData, [field]: newValues });
     };
 
     const onSubmit = async (e) => {
@@ -84,7 +79,7 @@ const PropostaForm = ({ proposalId, onFormSubmit }) => {
                 await axios.post('http://localhost:5000/api/propostas', formData, config);
                 setMessage('Proposta criada com sucesso!');
             }
-            setTimeout(() => { onFormSubmit(); }, 1500);
+            setTimeout(() => { if (onFormSubmit) onFormSubmit(); }, 1500);
         } catch (err) {
             setError(err.response?.data?.message || 'Ocorreu um erro.');
         } finally {
@@ -135,22 +130,43 @@ const PropostaForm = ({ proposalId, onFormSubmit }) => {
                         <Form.Label>Descrição Detalhada</Form.Label>
                         <Form.Control as="textarea" rows={4} name="descricao" value={formData.descricao} onChange={onChange} required />
                     </Form.Group>
-                    <Form.Group className="mb-3">
-                        <Form.Label>Competências Necessárias</Form.Label>
-                        <div style={{ maxHeight: '150px', overflowY: 'auto', border: '1px solid #ddd', padding: '10px', borderRadius: '5px' }}>
-                            {allCompetencias.length > 0 ? allCompetencias.map(c => (
-                                <Form.Check
-                                    key={c.id_competencia}
-                                    type="checkbox"
-                                    label={c.nome}
-                                    value={c.id_competencia}
-                                    onChange={handleCompetenciaChange}
-                                    checked={formData.competencias.includes(c.id_competencia)}
-                                />
-                            )) : <p>A carregar competências...</p>}
-                        </div>
-                    </Form.Group>
-                    <Button variant="primary" type="submit" disabled={loading}>
+                    <Row>
+                        <Col md={6}>
+                            <Form.Group className="mb-3">
+                                <Form.Label>Competências Necessárias</Form.Label>
+                                <div style={{ maxHeight: '150px', overflowY: 'auto', border: '1px solid #ddd', padding: '10px', borderRadius: '5px' }}>
+                                    {allCompetencias.length > 0 ? allCompetencias.map(c => (
+                                        <Form.Check
+                                            key={c.id_competencia}
+                                            type="checkbox"
+                                            label={c.nome}
+                                            value={c.id_competencia}
+                                            checked={formData.competencias.includes(c.id_competencia)}
+                                            onChange={(e) => handleCheckboxChange(e, 'competencias')}
+                                        />
+                                    )) : <p>A carregar...</p>}
+                                </div>
+                            </Form.Group>
+                        </Col>
+                        <Col md={6}>
+                            <Form.Group className="mb-3">
+                                <Form.Label>Áreas/Departamentos Relevantes</Form.Label>
+                                <div style={{ maxHeight: '150px', overflowY: 'auto', border: '1px solid #ddd', padding: '10px', borderRadius: '5px' }}>
+                                    {allAreas.length > 0 ? allAreas.map(a => (
+                                        <Form.Check
+                                            key={a.id_area}
+                                            type="checkbox"
+                                            label={a.nome}
+                                            value={a.id_area}
+                                            checked={formData.areas.includes(a.id_area)}
+                                            onChange={(e) => handleCheckboxChange(e, 'areas')}
+                                        />
+                                    )) : <p>A carregar...</p>}
+                                </div>
+                            </Form.Group>
+                        </Col>
+                    </Row>
+                    <Button variant="primary" type="submit" disabled={loading} className="mt-3">
                         {loading ? 'A guardar...' : (proposalId ? 'Guardar Alterações' : 'Submeter Proposta')}
                     </Button>
                 </Form>
