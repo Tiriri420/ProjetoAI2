@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Button, Badge, Modal, Spinner, Alert, Tabs, Tab } from 'react-bootstrap';
+import { Container, Row, Col, Card, Button, Badge, Modal, Spinner, Alert, Tabs, Tab, Form, InputGroup } from 'react-bootstrap';
 import axios from 'axios';
 import PerfilEstudanteForm from '../components/PerfilEstudanteForm';
 import PropostaDetalheModal from '../components/PropostaDetalheModal';
@@ -13,9 +13,10 @@ const PropostaCard = ({ proposta, candidaturaStatus, handleApply, handleShowDeta
                         {proposta.titulo}
                     </Card.Title>
                     <Card.Subtitle className="mb-2 text-muted">{proposta.empresa.nome_empresa}</Card.Subtitle>
-                    <div className="mt-auto">
+                    {candidaturaStatus && <Badge bg={{PENDENTE: 'warning', ACEITE: 'success', REJEITADO: 'danger'}[candidaturaStatus] || 'dark'}>Candidatura: {candidaturaStatus}</Badge>}
+                    <div className="mt-auto pt-3">
                         <Button
-                            variant={candidaturaStatus ? "success" : "primary"}
+                            variant={candidaturaStatus ? "secondary" : "primary"}
                             className="w-100"
                             onClick={() => handleApply(proposta.id_proposta)}
                             disabled={!!candidaturaStatus}
@@ -38,23 +39,21 @@ const DashboardEstudante = () => {
     const [showDetailModal, setShowDetailModal] = useState(false);
     const [selectedProposalId, setSelectedProposalId] = useState(null);
     const [candidaturasMap, setCandidaturasMap] = useState(new Map());
+    const [searchTerm, setSearchTerm] = useState('');
+    const [feedback, setFeedback] = useState({ type: '', msg: '' });
 
-    const fetchAllData = async () => {
+    const fetchPropostas = async (term = '') => {
         setLoading(true);
-        setError('');
         try {
             const token = localStorage.getItem('token');
             const config = { headers: { Authorization: `Bearer ${token}` } };
-            
             const [recomRes, allRes, profileRes] = await Promise.all([
-                axios.get('http://localhost:5000/api/propostas/recomendadas', config),
-                axios.get('http://localhost:5000/api/propostas', config),
-                axios.get('http://localhost:5000/api/estudantes/me', config)
+                axios.get(`http://localhost:5000/api/propostas/recomendadas`, config),
+                axios.get(`http://localhost:5000/api/propostas?search=${term}`, config),
+                axios.get(`http://localhost:5000/api/estudantes/me`, config)
             ]);
-
             setRecommendedPropostas(recomRes.data);
             setAllPropostas(allRes.data);
-            
             const appliedMap = new Map();
             if (profileRes.data.propostasCandidatadas) {
                 profileRes.data.propostasCandidatadas.forEach(c => {
@@ -64,9 +63,7 @@ const DashboardEstudante = () => {
                 });
             }
             setCandidaturasMap(appliedMap);
-
         } catch (err) {
-            console.error("ERRO DETALHADO AO CARREGAR DADOS:", err);
             setError('Não foi possível carregar as propostas.');
         } finally {
             setLoading(false);
@@ -74,17 +71,25 @@ const DashboardEstudante = () => {
     };
 
     useEffect(() => {
-        fetchAllData();
+        fetchPropostas();
     }, []);
+    
+    const handleSearch = (e) => {
+        e.preventDefault();
+        fetchPropostas(searchTerm);
+    };
 
     const handleApply = async (propostaId) => {
+        setFeedback({ type: '', msg: '' });
         try {
             const token = localStorage.getItem('token');
             await axios.post(`http://localhost:5000/api/estudantes/candidaturas/${propostaId}`, {}, { headers: { Authorization: `Bearer ${token}` } });
             setCandidaturasMap(prevMap => new Map(prevMap).set(propostaId, 'PENDENTE'));
+            setFeedback({ type: 'success', msg: 'Candidatura enviada com sucesso!' });
         } catch (err) {
-            alert(err.response?.data?.message || "Ocorreu um erro ao candidatar-se.");
+            setFeedback({ type: 'danger', msg: err.response?.data?.message || "Ocorreu um erro." });
         }
+        setTimeout(() => setFeedback({ type: '', msg: '' }), 5000);
     };
 
     const handleLogout = () => {
@@ -109,35 +114,37 @@ const DashboardEstudante = () => {
             <Modal show={showProfileModal} onHide={() => setShowProfileModal(false)} size="lg">
                 <Modal.Body><PerfilEstudanteForm onFormSubmit={() => setShowProfileModal(false)} /></Modal.Body>
             </Modal>
+            <PropostaDetalheModal proposalId={selectedProposalId} show={showDetailModal} handleClose={() => setShowDetailModal(false)} />
 
-            <PropostaDetalheModal 
-                proposalId={selectedProposalId} 
-                show={showDetailModal} 
-                handleClose={() => setShowDetailModal(false)} 
-            />
+            {feedback.msg && <Alert variant={feedback.type}>{feedback.msg}</Alert>}
 
-            {loading && <div className="text-center"><Spinner animation="border" /></div>}
-            {error && <Alert variant="danger">{error}</Alert>}
-            {!loading && !error && (
-                <Tabs defaultActiveKey="recomendadas" id="propostas-tabs" className="mb-3">
-                    <Tab eventKey="recomendadas" title="Recomendadas para Si">
+            <Tabs defaultActiveKey="recomendadas" id="propostas-tabs" className="mb-3">
+                <Tab eventKey="recomendadas" title="Recomendadas para Si">
+                    {loading ? <div className="text-center"><Spinner animation="border" /></div> : error ? <Alert variant="danger">{error}</Alert> :
                         <Row className="mt-3">
                             {recommendedPropostas.length > 0 ? recommendedPropostas.map(p => (
                                 <PropostaCard key={p.id_proposta} proposta={p} candidaturaStatus={candidaturasMap.get(p.id_proposta)} handleApply={handleApply} handleShowDetails={handleShowDetails} />
                             )) : <p className="text-center text-muted">Não encontrámos recomendações para si. Atualize o seu perfil!</p>}
                         </Row>
-                    </Tab>
-                    <Tab eventKey="todas" title="Todas as Oportunidades">
-                        <Row className="mt-3">
+                    }
+                </Tab>
+                <Tab eventKey="todas" title="Todas as Oportunidades">
+                    <Form onSubmit={handleSearch} className="mb-3 mt-3">
+                        <InputGroup>
+                            <Form.Control placeholder="Pesquisar por título ou descrição..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                            <Button variant="outline-secondary" type="submit">Pesquisar</Button>
+                        </InputGroup>
+                    </Form>
+                     {loading ? <div className="text-center"><Spinner animation="border" /></div> : error ? <Alert variant="danger">{error}</Alert> :
+                        <Row>
                             {allPropostas.length > 0 ? allPropostas.map(p => (
                                 <PropostaCard key={p.id_proposta} proposta={p} candidaturaStatus={candidaturasMap.get(p.id_proposta)} handleApply={handleApply} handleShowDetails={handleShowDetails} />
                             )) : <p className="text-center text-muted">De momento, não existem propostas disponíveis.</p>}
                         </Row>
-                    </Tab>
-                </Tabs>
-            )}
+                    }
+                </Tab>
+            </Tabs>
         </Container>
     );
 };
-
 export default DashboardEstudante;

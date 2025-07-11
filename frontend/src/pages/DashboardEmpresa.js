@@ -7,42 +7,73 @@ const CandidatesModal = ({ proposal, show, handleClose }) => {
     const [candidates, setCandidates] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
+    const fetchCandidates = async () => {
         if (proposal) {
-            const fetchCandidates = async () => {
-                setLoading(true);
-                try {
-                    const token = localStorage.getItem('token');
-                    const res = await axios.get(`http://localhost:5000/api/propostas/${proposal.id_proposta}/candidatos`, {
-                        headers: { Authorization: `Bearer ${token}` }
-                    });
-                    setCandidates(res.data);
-                } catch (err) {
-                    console.error("Erro ao buscar candidatos", err);
-                } finally {
-                    setLoading(false);
-                }
-            };
+            setLoading(true);
+            try {
+                const token = localStorage.getItem('token');
+                const res = await axios.get(`http://localhost:5000/api/propostas/${proposal.id_proposta}/candidatos`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                setCandidates(res.data);
+            } catch (err) {
+                console.error("Erro ao buscar candidatos", err);
+            } finally {
+                setLoading(false);
+            }
+        }
+    };
+
+    useEffect(() => {
+        if (show) {
             fetchCandidates();
         }
-    }, [proposal]);
+    }, [show, proposal]);
+
+    const handleDecision = async (estudanteId, status) => {
+        try {
+            const token = localStorage.getItem('token');
+            await axios.patch(`http://localhost:5000/api/empresas/candidaturas/${proposal.id_proposta}/${estudanteId}`,
+                { status }, { headers: { Authorization: `Bearer ${token}` } });
+            
+            setCandidates(prevCandidates => 
+                prevCandidates.map(c => 
+                    c.Utilizador.id_utilizador === estudanteId ? { ...c, Candidatura: { ...c.Candidatura, status: status } } : c
+                )
+            );
+        } catch (err) {
+            alert('Erro ao processar a decisão.');
+        }
+    };
 
     return (
-        <Modal show={show} onHide={handleClose} size="lg">
+        <Modal show={show} onHide={handleClose} size="lg" centered>
             <Modal.Header closeButton>
                 <Modal.Title>Candidatos para: {proposal?.titulo}</Modal.Title>
             </Modal.Header>
             <Modal.Body>
-                {loading ? <Spinner animation="border" /> : (
+                {loading ? <div className="text-center"><Spinner animation="border" /></div> : (
                     <ListGroup variant="flush">
                         {candidates.length > 0 ? candidates.map(c => (
-                            <ListGroup.Item key={c.Utilizador.id_utilizador}>
-                                <h5>{c.Utilizador.nome}</h5>
-                                <p className="mb-1 text-muted">{c.Utilizador.email}</p>
-                                <p className="mb-1"><strong>Curso:</strong> {c.curso || 'N/A'} ({c.ano_conclusao || 'N/A'})</p>
-                                <div>{c.habilidades.map(h => <Badge pill bg="dark" key={h.nome} className="me-1 fw-normal">{h.nome}</Badge>)}</div>
+                            <ListGroup.Item key={c.Utilizador.id_utilizador} className="d-flex justify-content-between align-items-center flex-wrap">
+                                <div className="mb-2">
+                                    <h5>{c.Utilizador.nome}</h5>
+                                    <p className="mb-1 text-muted">{c.Utilizador.email}</p>
+                                    <p className="mb-1"><strong>Curso:</strong> {c.curso || 'N/A'} ({c.ano_conclusao || 'N/A'})</p>
+                                    <div>{c.habilidades.map(h => <Badge pill bg="dark" key={h.nome} className="me-1 fw-normal">{h.nome}</Badge>)}</div>
+                                </div>
+                                <div className="align-self-center">
+                                    {c.Candidatura.status === 'PENDENTE' ? (
+                                        <>
+                                            <Button variant="success" size="sm" className="me-2" onClick={() => handleDecision(c.Utilizador.id_utilizador, 'ACEITE')}>Aceitar</Button>
+                                            <Button variant="danger" size="sm" onClick={() => handleDecision(c.Utilizador.id_utilizador, 'REJEITADO')}>Rejeitar</Button>
+                                        </>
+                                    ) : (
+                                        <Badge bg={c.Candidatura.status === 'ACEITE' ? 'success' : 'danger'}>{c.Candidatura.status}</Badge>
+                                    )}
+                                </div>
                             </ListGroup.Item>
-                        )) : <p>Ainda não existem candidatos para esta proposta.</p>}
+                        )) : <p className="text-center">Ainda não existem candidatos para esta proposta.</p>}
                     </ListGroup>
                 )}
             </Modal.Body>
@@ -66,7 +97,8 @@ const DashboardEmpresa = () => {
     };
 
     const fetchMinhasPropostas = async () => {
-        setLoading(true); setError('');
+        setLoading(true); 
+        setError('');
         try {
             const token = localStorage.getItem('token');
             const res = await axios.get('http://localhost:5000/api/propostas/minhas', { headers: { Authorization: `Bearer ${token}` } });
@@ -78,20 +110,51 @@ const DashboardEmpresa = () => {
         }
     };
 
-    useEffect(() => { fetchMinhasPropostas(); }, []);
+    useEffect(() => { 
+        fetchMinhasPropostas(); 
+    }, []);
 
     const getStatusBadge = (status) => {
         const map = { PENDENTE: 'warning', VALIDADO: 'success', FECHADO: 'secondary', REJEITADO: 'danger' };
         return <Badge bg={map[status] || 'dark'}>{status}</Badge>;
     };
 
-    const formatDate = (dateString) => new Date(dateString).toLocaleDateString('pt-PT');
-    const handleDeactivate = async (id) => { /* ... */ };
+    const formatDate = (dateString) => {
+        if (!dateString) return 'N/A';
+        return new Date(dateString).toLocaleDateString('pt-PT');
+    }
+
+    const handleDeactivate = async (id) => {
+        if (window.confirm("Tem a certeza que quer desativar esta proposta?")) {
+            try {
+                const token = localStorage.getItem('token');
+                await axios.patch(`http://localhost:5000/api/propostas/${id}/deactivate`, {}, { headers: { Authorization: `Bearer ${token}` } });
+                fetchMinhasPropostas();
+            } catch (err) {
+                alert("Ocorreu um erro ao desativar a proposta.");
+            }
+        }
+    };
     
-    const handleShowCreateModal = () => { setEditingProposalId(null); setShowFormModal(true); };
-    const handleShowEditModal = (id) => { setEditingProposalId(id); setShowFormModal(true); };
-    const handleFormSubmit = () => { setShowFormModal(false); fetchMinhasPropostas(); };
-    const handleShowCandidates = (proposal) => { setSelectedProposal(proposal); setShowCandidatesModal(true); };
+    const handleShowCreateModal = () => { 
+        setEditingProposalId(null); 
+        setShowFormModal(true); 
+    };
+
+    const handleShowEditModal = (id) => { 
+        setEditingProposalId(id); 
+        setShowFormModal(true); 
+    };
+
+    const handleFormSubmit = () => { 
+        setShowFormModal(false); 
+        fetchMinhasPropostas(); 
+    };
+
+    const handleShowCandidates = (proposal) => { 
+        setSelectedProposal(proposal); 
+        setShowCandidatesModal(true); 
+    };
 
     return (
         <Container fluid className="mt-4">
@@ -107,25 +170,28 @@ const DashboardEmpresa = () => {
             {selectedProposal && <CandidatesModal proposal={selectedProposal} show={showCandidatesModal} handleClose={() => setShowCandidatesModal(false)} />}
 
             <Card>
-                <Card.Header as="h5" className="d-flex justify-content-between">As Minhas Propostas<Button variant="primary" onClick={handleShowCreateModal}>+ Criar Nova Proposta</Button></Card.Header>
+                <Card.Header as="h5" className="d-flex justify-content-between align-items-center">
+                    As Minhas Propostas
+                    <Button variant="primary" onClick={handleShowCreateModal}>+ Criar Nova Proposta</Button>
+                </Card.Header>
                 <Card.Body>
-                    {loading && <Spinner animation="border" />}
+                    {loading && <div className="text-center"><Spinner animation="border" /></div>}
                     {error && <Alert variant="danger">{error}</Alert>}
                     {!loading && !error && (
                         <ListGroup variant="flush">
-                            {minhasPropostas.map(p => (
-                                <ListGroup.Item key={p.id_proposta} className="d-flex justify-content-between align-items-center">
-                                    <div>
+                            {minhasPropostas.length > 0 ? minhasPropostas.map(p => (
+                                <ListGroup.Item key={p.id_proposta} className="d-flex justify-content-between align-items-center flex-wrap">
+                                    <div className="mb-2">
                                         <h5>{p.titulo} {getStatusBadge(p.status)}</h5>
                                         <p className="mb-1 text-muted">{p.local_de_trabalho || 'N/A'} | Prazo: {formatDate(p.prazo_candidatura)}</p>
                                     </div>
-                                    <div>
+                                    <div className="d-flex align-items-center">
                                         <Button variant="info" size="sm" className="me-2" onClick={() => handleShowCandidates(p)}>Ver Candidatos</Button>
-                                        <Button variant="outline-secondary" size="sm" className="me-2" onClick={() => handleShowEditModal(p.id_proposta)}>Editar</Button>
-                                        <Button variant="outline-danger" size="sm" onClick={() => handleDeactivate(p.id_proposta)}>Desativar</Button>
+                                        <Button variant="outline-secondary" size="sm" className="me-2" onClick={() => handleShowEditModal(p.id_proposta)} disabled={p.status === 'FECHADO'}>Editar</Button>
+                                        <Button variant="outline-danger" size="sm" onClick={() => handleDeactivate(p.id_proposta)} disabled={p.status === 'FECHADO'}>Desativar</Button>
                                     </div>
                                 </ListGroup.Item>
-                            ))}
+                            )) : <p className="text-center text-muted">Ainda não criou nenhuma proposta.</p>}
                         </ListGroup>
                     )}
                 </Card.Body>

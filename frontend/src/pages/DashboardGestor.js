@@ -1,5 +1,3 @@
-// POSIÇÃO DO CÓDIGO: frontend/src/pages/DashboardGestor.js
-
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Button, ListGroup, Badge, Spinner, Alert } from 'react-bootstrap';
 import axios from 'axios';
@@ -43,7 +41,7 @@ const DashboardGestor = () => {
                 { newStatus },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
-            setPendingProposals(pendingProposals.filter(p => p.id_proposta !== id));
+            setPendingProposals(prevProposals => prevProposals.filter(p => p.id_proposta !== id));
         } catch (err) {
             alert(`Ocorreu um erro ao tentar ${newStatus === 'VALIDADO' ? 'aprovar' : 'rejeitar'} a proposta.`);
         }
@@ -58,7 +56,7 @@ const DashboardGestor = () => {
     return (
         <Container fluid className="mt-4">
             <Row className="align-items-center mb-4">
-                <Col><h1>Dashboard do Gestor</h1></Col>
+                <Col><h1>Dashboard do Gestor de Departamento</h1></Col>
                 <Col className="text-end"><Button variant="danger" onClick={handleLogout}>Logout</Button></Col>
             </Row>
 
@@ -75,19 +73,21 @@ const DashboardGestor = () => {
                                         <Col md={8}>
                                             <h5 className="mb-1">{p.titulo}</h5>
                                             <p className="mb-1"><strong>Empresa:</strong> {p.empresa.nome_empresa}</p>
-                                            
                                             <div className="d-flex text-muted mb-2">
-                                                <p className="mb-0 me-4"><strong>Local:</strong> {p.local_de_trabalho || 'Não especificado'}</p>
+                                                <p className="mb-0 me-4"><strong>Local:</strong> {p.local_de_trabalho || 'N/A'}</p>
                                                 <p className="mb-0"><strong>Prazo:</strong> {formatDate(p.prazo_candidatura)}</p>
                                             </div>
-                                            
                                             <p className="mb-2">{p.descricao}</p>
-                                            
-                                            <div>
+                                            <div className="mb-2">
+                                                <strong>Competências:</strong>
                                                 {p.competencias.map(c => (
-                                                    <Badge pill bg="info" key={c.nome} className="me-1 fw-normal">
-                                                        {c.nome}
-                                                    </Badge>
+                                                    <Badge pill bg="info" key={c.nome} className="ms-1 fw-normal">{c.nome}</Badge>
+                                                ))}
+                                            </div>
+                                            <div>
+                                                <strong>Áreas:</strong>
+                                                {p.areas.map(a => (
+                                                    <Badge pill bg="secondary" key={a.nome} className="ms-1 fw-normal">{a.nome}</Badge>
                                                 ))}
                                             </div>
                                         </Col>
@@ -109,7 +109,7 @@ const DashboardGestor = () => {
                                         </Col>
                                     </Row>
                                 </ListGroup.Item>
-                            )) : <p className="text-center text-muted">Não existem propostas pendentes de validação.</p>}
+                            )) : <p className="text-center text-muted">Não existem propostas pendentes para o seu departamento.</p>}
                         </ListGroup>
                     )}
                 </Card.Body>

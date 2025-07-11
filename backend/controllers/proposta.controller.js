@@ -1,18 +1,31 @@
-const { Proposta, PerfilEstudante, sequelize, Competencia, PerfilEmpresa, AreaDepartamento, Utilizador } = require('../models');
-
-// ===================================
-// Funções de Gestor/Admin
-// ===================================
+const { Proposta, PerfilEstudante, Utilizador, sequelize, Competencia, PerfilEmpresa, AreaDepartamento, PerfilGestor } = require('../models');
+const { Op } = require('sequelize');
 
 exports.getPendingProposals = async (req, res) => {
     try {
+        let whereClause = { status: 'PENDENTE' };
+        let includeClause = [
+            { model: PerfilEmpresa, as: 'empresa', attributes: ['nome_empresa'] },
+            { model: Competencia, as: 'competencias', attributes: ['nome'], through: { attributes: [] } },
+            { model: AreaDepartamento, as: 'areas', attributes: ['nome'], through: { attributes: [] } }
+        ];
+
+        if (req.user.role === 'GESTOR') {
+            const gestorProfile = await PerfilGestor.findByPk(req.user.id);
+            if (!gestorProfile || !gestorProfile.departamento_id) {
+                return res.status(200).json([]);
+            }
+            const areaInclude = includeClause.find(i => i.as === 'areas');
+            if (areaInclude) {
+                areaInclude.where = { id_area: gestorProfile.departamento_id };
+                areaInclude.required = true;
+            }
+        }
+
         const propostas = await Proposta.findAll({
-            where: { status: 'PENDENTE' },
+            where: whereClause,
             order: [['created_at', 'ASC']],
-            include: [
-                { model: PerfilEmpresa, as: 'empresa', attributes: ['nome_empresa'] },
-                { model: Competencia, as: 'competencias', attributes: ['nome'], through: { attributes: [] } }
-            ]
+            include: includeClause
         });
         res.status(200).json(propostas);
     } catch (error) {
@@ -25,27 +38,19 @@ exports.validateProposal = async (req, res) => {
     const { id } = req.params;
     const { newStatus } = req.body;
     if (!['VALIDADO', 'REJEITADO'].includes(newStatus)) {
-        return res.status(400).json({ message: 'Status de validação inválido. Use VALIDADO ou REJEITADO.' });
+        return res.status(400).json({ message: 'Status inválido.' });
     }
     try {
         const proposta = await Proposta.findByPk(id);
         if (!proposta) {
             return res.status(404).json({ message: 'Proposta não encontrada.' });
         }
-        await proposta.update({
-            status: newStatus,
-            validador_id: req.user.id
-        });
-        res.status(200).json({ message: `Proposta marcada como ${newStatus.toLowerCase()} com sucesso.` });
+        await proposta.update({ status: newStatus, validador_id: req.user.id });
+        res.status(200).json({ message: `Proposta marcada como ${newStatus.toLowerCase()}.` });
     } catch (error) {
-        console.error("ERRO AO VALIDAR PROPOSTA:", error);
         res.status(500).json({ message: 'Erro ao validar a proposta.' });
     }
 };
-
-// ===================================
-// Funções de Empresa
-// ===================================
 
 exports.createProposal = async (req, res) => {
     const empresa_utilizador_id = req.user.id;
@@ -61,7 +66,6 @@ exports.createProposal = async (req, res) => {
         res.status(201).json({ message: 'Proposta criada com sucesso!', proposta: novaProposta });
     } catch (error) {
         await t.rollback();
-        console.error("ERRO AO CRIAR PROPOSTA:", error);
         res.status(500).json({ message: 'Erro interno ao criar a proposta.' });
     }
 };
@@ -75,7 +79,6 @@ exports.getMyProposals = async (req, res) => {
         });
         res.status(200).json(propostas);
     } catch (error) {
-        console.error('ERRO AO BUSCAR MINHAS PROPOSTAS:', error);
         res.status(500).json({ message: 'Erro ao buscar as propostas.' });
     }
 };
@@ -91,11 +94,10 @@ exports.getProposalById = async (req, res) => {
             ]
         });
         if (!proposta) {
-            return res.status(404).json({ message: 'Proposta não encontrada ou não pertence a esta empresa.' });
+            return res.status(404).json({ message: 'Proposta não encontrada.' });
         }
         res.status(200).json(proposta);
     } catch (error) {
-        console.error('ERRO AO BUSCAR PROPOSTA POR ID:', error);
         res.status(500).json({ message: 'Erro ao buscar a proposta.' });
     }
 };
@@ -114,7 +116,6 @@ exports.updateProposal = async (req, res) => {
         res.status(200).json({ message: 'Proposta atualizada com sucesso!' });
     } catch (error) {
         await t.rollback();
-        console.error("ERRO AO ATUALIZAR PROPOSTA:", error);
         res.status(500).json({ message: 'Erro interno ao atualizar a proposta.' });
     }
 };
@@ -124,24 +125,29 @@ exports.deactivateProposal = async (req, res) => {
     try {
         const proposta = await Proposta.findOne({ where: { id_proposta: id, empresa_utilizador_id: req.user.id } });
         if (!proposta) {
-            return res.status(404).json({ message: 'Proposta não encontrada ou não pertence a esta empresa.' });
+            return res.status(404).json({ message: 'Proposta não encontrada.' });
         }
         await proposta.update({ status: 'FECHADO' });
         res.status(200).json({ message: 'Proposta desativada com sucesso.' });
     } catch (error) {
-        console.error('ERRO AO DESATIVAR PROPOSTA:', error);
         res.status(500).json({ message: 'Erro ao desativar a proposta.' });
     }
 };
 
-// ===================================
-// Funções de Estudante
-// ===================================
-
 exports.getValidatedProposals = async (req, res) => {
+    const { search } = req.query;
+    let whereClause = { status: 'VALIDADO' };
+
+    if (search) {
+        whereClause[Op.or] = [
+            { titulo: { [Op.iLike]: `%${search}%` } },
+            { descricao: { [Op.iLike]: `%${search}%` } }
+        ];
+    }
+    
     try {
         const propostas = await Proposta.findAll({
-            where: { status: 'VALIDADO' },
+            where: whereClause,
             order: [['created_at', 'DESC']],
             include: [
                 { model: PerfilEmpresa, as: 'empresa', attributes: ['nome_empresa'] },
@@ -150,7 +156,6 @@ exports.getValidatedProposals = async (req, res) => {
         });
         res.status(200).json(propostas);
     } catch (error) {
-        console.error("ERRO AO BUSCAR PROPOSTAS VALIDADAS:", error);
         res.status(500).json({ message: 'Erro ao buscar propostas validadas.' });
     }
 };
@@ -194,6 +199,26 @@ exports.getRecommendedProposals = async (req, res) => {
     }
 };
 
+exports.getSingleValidatedProposal = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const proposta = await Proposta.findOne({
+            where: { id_proposta: id, status: 'VALIDADO' },
+            include: [
+                { model: PerfilEmpresa, as: 'empresa', attributes: ['nome_empresa', 'localizacao'] },
+                { model: Competencia, as: 'competencias', attributes: ['nome', 'tipo'], through: { attributes: [] } },
+                { model: AreaDepartamento, as: 'areas', attributes: ['nome'], through: { attributes: [] } }
+            ]
+        });
+        if (!proposta) {
+            return res.status(404).json({ message: "Proposta não encontrada ou não está disponível." });
+        }
+        res.status(200).json(proposta);
+    } catch (error) {
+        res.status(500).json({ message: 'Erro ao buscar detalhes da proposta.' });
+    }
+};
+
 exports.getProposalCandidates = async (req, res) => {
     try {
         const { id } = req.params;
@@ -208,16 +233,8 @@ exports.getProposalCandidates = async (req, res) => {
         const candidatos = await proposta.getCandidatos({
             attributes: ['curso', 'ano_conclusao'],
             include: [
-                {
-                    model: Utilizador,
-                    attributes: ['id_utilizador', 'nome', 'email']
-                },
-                {
-                    model: Competencia,
-                    as: 'habilidades',
-                    attributes: ['nome'],
-                    through: { attributes: [] }
-                }
+                { model: Utilizador, attributes: ['id_utilizador', 'nome', 'email'] },
+                { model: Competencia, as: 'habilidades', attributes: ['nome'], through: { attributes: [] } }
             ]
         });
         res.status(200).json(candidatos);
@@ -227,26 +244,16 @@ exports.getProposalCandidates = async (req, res) => {
     }
 };
 
-exports.getSingleValidatedProposal = async (req, res) => {
+exports.getAlreadyValidatedProposals = async (req, res) => {
     try {
-        const { id } = req.params;
-        const proposta = await Proposta.findOne({
+        const propostas = await Proposta.findAll({
             where: {
-                id_proposta: id,
-                status: 'VALIDADO'
+                status: { [Op.in]: ['VALIDADO', 'REJEITADO'] }
             },
-            include: [
-                { model: PerfilEmpresa, as: 'empresa', attributes: ['nome_empresa', 'localizacao'] },
-                { model: Competencia, as: 'competencias', attributes: ['nome', 'tipo'], through: { attributes: [] } },
-                { model: AreaDepartamento, as: 'areas', attributes: ['nome'], through: { attributes: [] } }
-            ]
+            order: [['updated_at', 'DESC']]
         });
-
-        if (!proposta) {
-            return res.status(404).json({ message: "Proposta não encontrada ou não está disponível." });
-        }
-        res.status(200).json(proposta);
+        res.status(200).json(propostas);
     } catch (error) {
-        res.status(500).json({ message: 'Erro ao buscar detalhes da proposta.' });
+        res.status(500).json({ message: 'Erro ao buscar histórico de validações.' });
     }
 };
