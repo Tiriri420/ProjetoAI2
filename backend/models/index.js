@@ -12,6 +12,8 @@ db.Competencia = require('./Competencia');
 db.AreaDepartamento = require('./AreaDepartamento');
 db.Candidatura = require('./Candidatura');
 
+db.sequelize.models.Candidatura = db.Candidatura;
+
 db.Utilizador.hasOne(db.PerfilEmpresa, { foreignKey: 'utilizador_id', onDelete: 'CASCADE' });
 db.PerfilEmpresa.belongsTo(db.Utilizador, { foreignKey: 'utilizador_id' });
 db.Utilizador.hasOne(db.PerfilGestor, { foreignKey: 'utilizador_id', onDelete: 'CASCADE' });

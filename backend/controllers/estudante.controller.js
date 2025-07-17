@@ -1,4 +1,4 @@
-const { PerfilEstudante, Competencia, AreaDepartamento, Proposta, sequelize } = require('../models');
+const { PerfilEstudante, Competencia, AreaDepartamento, Proposta, Candidatura, sequelize } = require('../models');
 
 exports.getMyProfile = async (req, res) => {
     try {
@@ -53,7 +53,7 @@ exports.applyToProposal = async (req, res) => {
         const { propostaId } = req.params;
         const estudanteId = req.user.id;
 
-        await sequelize.models.candidaturas.create({
+        await Candidatura.create({
             estudante_utilizador_id: estudanteId,
             proposta_id: propostaId
         });
